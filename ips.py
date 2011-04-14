@@ -25,16 +25,20 @@ THE SOFTWARE.
 import struct
 import getopt, sys
 
+usage = \
+"""usage: %s -f [file] -p [patch.ips]
+""" % sys.argv[0]
+
 def apply(patchname, filename):
-"""
-Applies the IPS patch patchname to the file filename.
-"""
+    """
+        Applies the IPS patch patchname to the file filename.
+    """
     patchfile = file(patchname, 'r')
     infile = file(filename, 'r+b')
 
     if patchfile.read(5)  != 'PATCH':
-        print "Error. No IPS header."
-        return False
+        sys.stderr.write("Error. No IPS header.\n")
+        sys.exit(2)
     print "PATCH... OK!"
     
     while True:
@@ -66,15 +70,15 @@ Applies the IPS patch patchname to the file filename.
     # Cleanup
     infile.close()
     patchfile.close()
-    
-    return True
 
 if __name__ == "__main__":
     try:
         opts, args = getopt.getopt(sys.argv[1:], "f:p:")
     except getopt.GetoptError, err:
-        print err
-        sys.exit(2)
+        sys.stderr.write("%s\n" % str(err))
+        sys.stderr.write(usage); sys.exit(2)
+    if len(opts) == 0:
+        sys.stderr.write(usage); sys.exit(2)
     for o, a in opts:
         if o == "-f": topatch = a
         elif o == "-p": ipspatch = a
