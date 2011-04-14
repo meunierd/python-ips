@@ -33,7 +33,7 @@ def apply(patchname, filename):
     """
         Applies the IPS patch patchname to the file filename.
     """
-    patchfile = file(patchname, 'r')
+    patchfile = file(patchname, 'rb')
     infile = file(filename, 'r+b')
 
     if patchfile.read(5)  != 'PATCH':
