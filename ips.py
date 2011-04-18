@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (C) 2011 by Devon Meunier
+Copyright (C) 2011 by Devon Meunier <devon.meunier@utoronto.ca>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,10 +23,10 @@ THE SOFTWARE.
 """
 
 import struct
-import getopt, sys
+import getopt, sys, shutil
 
 usage = \
-"""usage: %s -f [file] -p [patch.ips]
+"""usage: %s [-l] [-b] -f [file] -p [patch.ips]
 """ % sys.argv[0]
 
 def apply(patchname, filename, log = False):
@@ -37,7 +37,7 @@ def apply(patchname, filename, log = False):
         logfile = file(patchname[:-3] + "log", "w")
         logfile.write('Applying to "%s"\n\n' % filename)
         logfile.write("Record   | Size | Range Patched     | RLE\n")
-        logfile.write("-----------------------------------------\n")
+        logfile.write("---------+------+-------------------+----\n")
     patchfile = file(patchname, 'rb')
     infile = file(filename, 'r+b')
 
@@ -84,11 +84,13 @@ def apply(patchname, filename, log = False):
     # Cleanup
     infile.close()
     patchfile.close()
+    if log: logfile.close()
 
 if __name__ == "__main__":
     LOG = False
+    BACKUP = False
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "f:p:l")
+        opts, args = getopt.getopt(sys.argv[1:], "f:p:lb")
     except getopt.GetoptError, err:
         sys.stderr.write("%s\n" % err)
         sys.stderr.write(usage); sys.exit(2)
@@ -98,5 +100,8 @@ if __name__ == "__main__":
         if o == "-f": topatch = a
         elif o == "-p": ipspatch = a
         elif o == "-l": LOG = True
+        elif o == "-b": BACKUP = True
+
+    if BACKUP: shutil.copyfile(topatch, topatch + ".bak")
 
     apply(ipspatch, topatch, LOG)
