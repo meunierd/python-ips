@@ -22,8 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-import struct
-import getopt, sys, shutil
+import getopt, sys, shutil, struct
+from os import path
 
 usage = \
 """usage: %s [-l] [-b] -f [file] -p [patch.ips]
@@ -52,8 +52,8 @@ def apply(patchname, filename, log = False):
         # Read Record 
         r = patchfile.read(3)
 
-        if r == 'EOF':
-            print "Patch complete."
+        if r == 'EOF' and path.getsize(patchname) == patchfile.tell():
+            print 'Patching "%s" successful.' % filename
             break 
 
         # Unpack 3-byte pointers.
@@ -79,7 +79,7 @@ def apply(patchname, filename, log = False):
         if log:
             rle = "No"
             if rle_size: size = rle_size; rle = "Yes"
-            logfile.write("%08x | %04x | %08x-%08x | %s\n"
+            logfile.write("%08X | %04X | %08X-%08X | %s\n"
                 % (pt, size, offset, offset + size, rle))
     # Cleanup
     infile.close()
@@ -87,8 +87,8 @@ def apply(patchname, filename, log = False):
     if log: logfile.close()
 
 if __name__ == "__main__":
-    LOG = False
-    BACKUP = False
+    LOG, BACKUP = False, False
+
     try:
         opts, args = getopt.getopt(sys.argv[1:], "f:p:lb")
     except getopt.GetoptError, err:
