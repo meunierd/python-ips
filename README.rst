@@ -1,5 +1,5 @@
 python-ips
-==========
+----------
 
 An IPS patching application with module, cli, and PyGUI interfaces.
 
