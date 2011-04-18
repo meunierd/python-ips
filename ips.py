@@ -29,19 +29,26 @@ usage = \
 """usage: %s -f [file] -p [patch.ips]
 """ % sys.argv[0]
 
-def apply(patchname, filename):
+def apply(patchname, filename, log = False):
     """
         Applies the IPS patch patchname to the file filename.
     """
+    if log:
+        logfile = file(patchname[:-3] + "log", "w")
+        logfile.write('Applying to "%s"\n\n' % filename)
+        logfile.write("Record   | Size | Range Patched     | RLE\n")
+        logfile.write("-----------------------------------------\n")
     patchfile = file(patchname, 'rb')
     infile = file(filename, 'r+b')
 
     if patchfile.read(5)  != 'PATCH':
         sys.stderr.write("Error. No IPS header.\n")
         sys.exit(2)
-    print "PATCH... OK!"
     
     while True:
+        pt = patchfile.tell()
+        rle_size = None
+
         # Read Record 
         r = patchfile.read(3)
 
@@ -53,6 +60,7 @@ def apply(patchname, filename):
         offset = struct.unpack_from('>I', '\x00' + r)[0]
         # Read size of data chunk
         r = patchfile.read(2)
+        if  len(r) == 0: break
         size = struct.unpack_from('>I', '\x00\x00' + r)[0]
 
         if size == 0: # RLE Record
@@ -66,21 +74,29 @@ def apply(patchname, filename):
         # Write to file
         infile.seek(offset)
         infile.write(data)
-        
+       
+        # Write to log
+        if log:
+            rle = "No"
+            if rle_size: size = rle_size; rle = "Yes"
+            logfile.write("%08x | %04x | %08x-%08x | %s\n"
+                % (pt, size, offset, offset + size, rle))
     # Cleanup
     infile.close()
     patchfile.close()
 
 if __name__ == "__main__":
+    LOG = False
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "f:p:")
+        opts, args = getopt.getopt(sys.argv[1:], "f:p:l")
     except getopt.GetoptError, err:
-        sys.stderr.write("%s\n" % str(err))
+        sys.stderr.write("%s\n" % err)
         sys.stderr.write(usage); sys.exit(2)
     if len(opts) == 0:
         sys.stderr.write(usage); sys.exit(2)
     for o, a in opts:
         if o == "-f": topatch = a
         elif o == "-p": ipspatch = a
+        elif o == "-l": LOG = True
 
-    apply(ipspatch, topatch)
+    apply(ipspatch, topatch, LOG)
