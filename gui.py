@@ -1,11 +1,51 @@
-import ips
-from GUI import FileType, request_old_file, note_alert
+import clr
+clr.AddReference("System.Windows.Forms")
+clr.AddReference("System.Drawing")
 
-ips_type = FileType(name = "IPS Patch", suffix = "ips")
+from System.Windows.Forms import (Application, Button, Form, CheckBox,
+     FlowLayoutPanel, FlatStyle, OpenFileDialog, DialogResult, MessageBox)
+from System.Drawing import Size, Rectangle
 
-ipspatch = request_old_file("Select IPS Patch", file_types=[ips_type])
-topatch = request_old_file("Select File to Patch")
+import ips, shutil
 
-ips.apply(ipspatch.path, topatch.path)
+class IPSForm(Form):
+    def __init__(self):
+        Form.__init__(self)
+        self.Text = "python-ips"
+        self.ClientSize = Size(300, 40)
+        self.panel = FlowLayoutPanel()
+        self.backupbox = CheckBox()
+        self.backupbox.Text = "Backup target"
+        self.logbox = CheckBox()
+        self.logbox.Text = "Save logfile"
 
-note_alert("Patching %s successful." % topatch.name)
+        button = Button()
+        button.FlatStyle = FlatStyle.System
+        button.Text = "Apply IPS"
+        button.Click += self.patch
+        self.panel.Width = 350
+        self.panel.Controls.Add(self.backupbox)
+        self.panel.Controls.Add(self.logbox)
+        self.panel.Controls.Add(button)
+        self.Controls.Add(self.panel)
+
+    def patch(self, x, y):
+        files = True
+        ipsfilter = "IPS Patch (*.IPS)|*IPS"
+
+        pfd = OpenFileDialog(Filter = ipsfilter,
+                             Title = "Select IPS Patch")
+        if pfd.ShowDialog() != DialogResult.OK:
+            files = False
+        tfd = OpenFileDialog(Filter = "All Files (*.*)|*.*",
+                             Title = "Select File to Patch")
+        if tfd.ShowDialog() != DialogResult.OK:
+            files = False
+        if files:
+            if self.backupbox.Checked:
+                shutil.copyfile(tfd.FileName, tfd.FileName + ".bak")
+            ips.apply(pfd.FileName, tfd.FileName, self.logbox.Checked)
+            MessageBox.Show("Successfully patched %s." % tfd.FileName,
+                            "Patch Complete.")
+Application.EnableVisualStyles()
+Application.Run(IPSForm())
