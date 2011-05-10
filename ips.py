@@ -26,10 +26,10 @@ import getopt, sys, shutil, struct
 from os import path
 
 usage = \
-"""usage: %s [-l] [-b] -f [file] -p [patch.ips]
+"""usage: %s [-l] [-b] -f TARGET -p PATCH.ips [--fake-header]
 """ % sys.argv[0]
 
-def apply(patchname, filename, log = False):
+def apply(patchname, filename, log = False, fake = False):
     """
         Applies the IPS patch patchname to the file filename.
     """
@@ -72,7 +72,8 @@ def apply(patchname, filename, log = False):
             data = patchfile.read(size)
 
         # Write to file
-        infile.seek(offset)
+        if fake: infile.seek(offset - 512)
+        else: infile.seek(offset)
         infile.write(data)
        
         # Write to log
@@ -87,10 +88,10 @@ def apply(patchname, filename, log = False):
     if log: logfile.close()
 
 if __name__ == "__main__":
-    LOG, BACKUP = False, False
+    LOG, BACKUP, FAKEHEADER = False, False, False
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "f:p:lb")
+        opts, args = getopt.getopt(sys.argv[1:], "f:p:lb", ['fake-header'])
     except getopt.GetoptError, err:
         sys.stderr.write("%s\n" % err)
         sys.stderr.write(usage); sys.exit(2)
@@ -101,7 +102,8 @@ if __name__ == "__main__":
         elif o == "-p": ipspatch = a
         elif o == "-l": LOG = True
         elif o == "-b": BACKUP = True
+        elif o == "--fake-header": FAKEHEADER = True
 
     if BACKUP: shutil.copyfile(topatch, topatch + ".bak")
 
-    apply(ipspatch, topatch, LOG)
+    apply(ipspatch, topatch, LOG, FAKEHEADER)
