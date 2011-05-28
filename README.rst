@@ -1,7 +1,7 @@
 python-ips
 ----------
 
-An IPS patching application with module, cli, and PyGUI interfaces.
+An IPS patching application with api, cli, and WinForms interfaces.
 
 Basic Usage
 -----------
@@ -17,6 +17,12 @@ Or on Windows, be sure to have python.exe on your path and run.
 ::
 
     python.exe ips.py -f [file to patch] -p [ips patch]
+
+If you have IronPython 2.7 or newer installed, you can launch the python-ips GUI.
+
+::
+
+    ipy gui.py
 
 Options
 -------
