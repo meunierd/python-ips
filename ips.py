@@ -22,22 +22,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-import getopt, sys, shutil, struct
+import getopt, sys, shutil, struct, logging
 from os import path
 
 usage = \
 """usage: %s [-l] [-b] -f TARGET -p PATCH.ips [--fake-header]
 """ % sys.argv[0]
 
-def apply(patchname, filename, log = False, fake = False):
+def apply(patchname, filename, fake = False):
     """
         Applies the IPS patch patchname to the file filename.
     """
-    if log:
-        logfile = file(patchname[:-3] + "log", "w")
-        logfile.write('Applying to "%s"\n\n' % filename)
-        logfile.write("Record   | Size | Range Patched     | RLE\n")
-        logfile.write("---------+------+-------------------+----\n")
+    logging.info('Applying to "%s"' % filename)
+    logging.info("Record   | Size | Range Patched     | RLE")
+    logging.info("---------+------+-------------------+----")
     patchfile = file(patchname, 'rb')
     infile = file(filename, 'r+b')
 
@@ -77,15 +75,13 @@ def apply(patchname, filename, log = False, fake = False):
         infile.write(data)
        
         # Write to log
-        if log:
-            rle = "No"
-            if rle_size: size = rle_size; rle = "Yes"
-            logfile.write("%08X | %04X | %08X-%08X | %s\n"
-                % (pt, size, offset, offset + size, rle))
+        rle = "No"
+        if rle_size: size = rle_size; rle = "Yes"
+        logging.info("%08X | %04X | %08X-%08X | %s"
+            % (pt, size, offset, offset + size, rle))
     # Cleanup
     infile.close()
     patchfile.close()
-    if log: logfile.close()
 
 if __name__ == "__main__":
     LOG, BACKUP, FAKEHEADER = False, False, False
@@ -105,5 +101,6 @@ if __name__ == "__main__":
         elif o == "--fake-header": FAKEHEADER = True
 
     if BACKUP: shutil.copyfile(topatch, topatch + ".bak")
+    if LOG: logging.basicConfig(filename = ipspatch[:-3] + 'log', level=logging.INFO)
 
-    apply(ipspatch, topatch, LOG, FAKEHEADER)
+    apply(ipspatch, topatch, FAKEHEADER)
