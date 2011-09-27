@@ -37,12 +37,19 @@ def apply(patchname, filename, **kwargs):
     """
         Applies the IPS patch patchname to the file filename.
     """
+    if 'backup' in kwargs:
+        shutil.copyfile(filename, filename + ".bak")
+
+    if 'logging' in kwargs:
+        logging.basicConfig(filename=patchname[:-3] + 'log', level=logging.INFO)
+    
     logging.info('Applying to "%s"' % filename)
     logging.info("Record   | Size | Range Patched     | RLE")
     logging.info("---------+------+-------------------+----")
 
     patchfile = open(patchname, 'rb')
     infile = open(filename, 'r+b')
+
     header = patchfile.read(5)
     if header  != b'PATCH':
         sys.stderr.write("Error. No IPS header. READ: %s\n" % header)
@@ -95,17 +102,22 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], "f:p:lb", ['fake-header'])
     except getopt.GetoptError:
-        sys.stderr.write(usage); sys.exit(2)
+        sys.stderr.write(usage)
+        sys.exit(2)
     if len(opts) == 0:
-        sys.stderr.write(usage); sys.exit(2)
+        sys.stderr.write(usage)
+        sys.exit(2)
     for o, a in opts:
-        if o == "-f": topatch = a
-        elif o == "-p": ips = a
+        if o == "-f":
+            topatch = a
+        elif o == "-p":
+            ips = a
         elif o == "-l":
-            logging.basicConfig(filename=ips[:-3] + 'log', level=logging.INFO)
-        elif o == "-b": 
-            shutil.copyfile(topatch, topatch + ".bak")
-        elif o == "--fake-header": kwargs['fake'] = True 
+            kwargs['logging'] = True
+        elif o == "-b":
+            kwargs['backup'] = True 
+        elif o == "--fake-header":
+            kwargs['fake'] = True 
 
     apply(ips, topatch, **kwargs)
 
