@@ -22,25 +22,30 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-import getopt, sys, shutil, struct, logging
-from os import path
+import getopt
+import sys
+import shutil
+import struct
+import logging
+import os
 
 usage = \
 """usage: %s [-l] [-b] -f TARGET -p PATCH.ips [--fake-header]
 """ % sys.argv[0]
 
-def apply(patchname, filename, fake = False):
+def apply(patchname, filename, **kwargs):
     """
         Applies the IPS patch patchname to the file filename.
     """
     logging.info('Applying to "%s"' % filename)
     logging.info("Record   | Size | Range Patched     | RLE")
     logging.info("---------+------+-------------------+----")
-    patchfile = file(patchname, 'rb')
-    infile = file(filename, 'r+b')
 
-    if patchfile.read(5)  != 'PATCH':
-        sys.stderr.write("Error. No IPS header.\n")
+    patchfile = open(patchname, 'rb')
+    infile = open(filename, 'r+b')
+    header = patchfile.read(5)
+    if header  != b'PATCH':
+        sys.stderr.write("Error. No IPS header. READ: %s\n" % header)
         sys.exit(2)
     
     while True:
@@ -50,27 +55,28 @@ def apply(patchname, filename, fake = False):
         # Read Record 
         r = patchfile.read(3)
 
-        if r == 'EOF' and path.getsize(patchname) == patchfile.tell():
-            print 'Patching "%s" successful.' % filename
+        # Are we at the end?
+        if r == b'EOF' and os.path.getsize(patchname) == patchfile.tell():
+            sys.stdout.write('Patching "%s" successful.\n' % filename)
             break 
 
         # Unpack 3-byte pointers.
-        offset = struct.unpack_from('>I', '\x00' + r)[0]
+        offset = struct.unpack_from('>I', b'\x00' + r)[0]
         # Read size of data chunk
         r = patchfile.read(2)
         if  len(r) == 0: break
-        size = struct.unpack_from('>I', '\x00\x00' + r)[0]
+        size = struct.unpack_from('>I', b'\x00\x00' + r)[0]
 
         if size == 0: # RLE Record
             r = patchfile.read(2)
-            rle_size = struct.unpack_from('>I', '\x00\x00' + r)[0]
+            rle_size = struct.unpack_from('>I', b'\x00\x00' + r)[0]
             data = patchfile.read(1) * rle_size
         else:
             # Read Data
             data = patchfile.read(size)
 
         # Write to file
-        if fake: infile.seek(offset - 512)
+        if 'fake' in kwargs and kwargs['fake']: infile.seek(offset - 512)
         else: infile.seek(offset)
         infile.write(data)
        
@@ -79,28 +85,29 @@ def apply(patchname, filename, fake = False):
         if rle_size: size = rle_size; rle = "Yes"
         logging.info("%08X | %04X | %08X-%08X | %s"
             % (pt, size, offset, offset + size, rle))
+
     # Cleanup
     infile.close()
     patchfile.close()
 
-if __name__ == "__main__":
-    LOG, BACKUP, FAKEHEADER = False, False, False
-
+def main():
+    kwargs = {}
     try:
         opts, args = getopt.getopt(sys.argv[1:], "f:p:lb", ['fake-header'])
-    except getopt.GetoptError, err:
-        sys.stderr.write("%s\n" % err)
+    except getopt.GetoptError:
         sys.stderr.write(usage); sys.exit(2)
     if len(opts) == 0:
         sys.stderr.write(usage); sys.exit(2)
     for o, a in opts:
         if o == "-f": topatch = a
-        elif o == "-p": ipspatch = a
-        elif o == "-l": LOG = True
-        elif o == "-b": BACKUP = True
-        elif o == "--fake-header": FAKEHEADER = True
+        elif o == "-p": ips = a
+        elif o == "-l":
+            logging.basicConfig(filename=ips[:-3] + 'log', level=logging.INFO)
+        elif o == "-b": 
+            shutil.copyfile(topatch, topatch + ".bak")
+        elif o == "--fake-header": kwargs['fake'] = True 
 
-    if BACKUP: shutil.copyfile(topatch, topatch + ".bak")
-    if LOG: logging.basicConfig(filename = ipspatch[:-3] + 'log', level=logging.INFO)
+    apply(ips, topatch, **kwargs)
 
-    apply(ipspatch, topatch, FAKEHEADER)
+if __name__ == "__main__":
+    main()
