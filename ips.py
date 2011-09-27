@@ -1,6 +1,32 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 """
+...is a simple ips patching utility and has been tested to work on python2.7, 
+python3, and IronPython 2.7. 
+The latest version of this script can always be downloaded from
+[Bitbucket](https://bitbucket.org/meunierd/python-ips/raw/tip/ips.py).
+"""
+
+"""
+## Usage
+
+Run by typing the following:
+
+python ips.py -f target -p patch [-b] [-l] [--fake-header]
+
+### Options
+
+*-b:* creates a backup of the target.
+
+*-l*: creates a log in the patch directory.
+
+*--fake-header:* corrects for patches expecting a 512-byte header.
+"""
+
+"""
+## License
+
 Copyright (C) 2011 by Devon Meunier <devon.meunier@utoronto.ca>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,13 +55,18 @@ import struct
 import logging
 import os
 
-usage = \
-"""usage: %s [-l] [-b] -f TARGET -p PATCH.ips [--fake-header]
-""" % sys.argv[0]
 
+### API Documentation
 def apply(patchname, filename, **kwargs):
     """
-        Applies the IPS patch patchname to the file filename.
+    ###apply:
+    
+    *patchname:* the path to the ips patch.
+
+    *filename:* the patch the ips file.
+
+    ***kwargs:* accepted keys; `logging` enables logging, `backup` creates a 
+    backup of the target, `fake` spoof a 512-byte header.
     """
     if 'backup' in kwargs:
         shutil.copyfile(filename, filename + ".bak")
@@ -98,6 +129,11 @@ def apply(patchname, filename, **kwargs):
     patchfile.close()
 
 def main():
+    """
+    **main:** process args and run.
+    """
+    usage = "usage: %s [-l] [-b] -f TARGET -p PATCH.ips [--fake-header]\n" % sys.argv[0]
+
     kwargs = {}
     try:
         opts, args = getopt.getopt(sys.argv[1:], "f:p:lb", ['fake-header'])
