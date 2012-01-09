@@ -39,9 +39,6 @@ def load_script():
     assert script["target"] != script["source"]
 
     # Load the `SIZE` and optional `MD5`
-    # In the original ROM Expander Pro, an MD5 is checked if present, but
-    # will attempt to expand anyways. This implementation forces MD5s to
-    # match if present.
     l = load_line(script_lines.pop(0))
     script["old_size"] = eval("0x" + l[1])
     script["new_size"] = eval("0x" + l[2])
@@ -112,5 +109,4 @@ def expand_rom(script):
             elif cmd == "REPLACE": pass
 
 script = load_script()
-print script
 expand_rom(script)
