@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from binascii import unhexlify
-from struct import unpack_from
 import md5
 
 __author__ = "Devon Meunier"
@@ -13,7 +12,7 @@ def get_md5(source):
     """Return the MD5 hash of the file `source`."""
     m = md5.new()
     while True:
-        d = source.read(8096)
+        d = source.read(8196)
         if not d: break
         m.update(d)
     return m.hexdigest()
@@ -22,11 +21,6 @@ def hex_to_bstr(d):
     """Return the bytestring equivalent of a plain-text hex value."""
     if len(d) % 2: d = "0" + d
     return unhexlify(d)
-
-def bstr_to_long(b):
-    """Return a bytestring as a number."""
-    b = "\x00" * (4 - len(b)) + b
-    return unpack_from(">l", b)[0]
 
 def load_line(s):
     """Tokenize a tab-delineated string and return as a list."""
@@ -49,14 +43,14 @@ def load_script():
     # will attempt to expand anyways. This implementation forces MD5s to
     # match if present.
     l = load_line(script_lines.pop(0))
-    script["old_size"] = bstr_to_long(hex_to_bstr(l[1]))
-    script["new_size"] = bstr_to_long(hex_to_bstr(l[2]))
+    script["old_size"] = eval("0x" + l[1])
+    script["new_size"] = eval("0x" + l[2])
     if l.index(l[-1]) > 2: script["MD5"] = l[3].lower()
 
     # Load the replacement `HEADER`.
     l = load_line(script_lines.pop(0))
     assert 'HEADER' == l.pop(0) 
-    script["header_size"] = bstr_to_long(hex_to_bstr(l.pop(0)))
+    script["header_size"] = eval("0x" + l.pop(0))
     assert script["header_size"] > len(l)
     # Sanitize and concatenate the header data.
     new_header = "".join(["0" * (2 - len(x)) + x for x in l])
@@ -69,7 +63,7 @@ def load_script():
         with open(script["source"], "rb") as s_file:
             # Don't digest the header.
             s_file.read(script["header_size"])
-            assert script["MD5"] == get_md5(s_file)
+            assert script["MD5"] == get_md5(s_file) 
 
     script["ops"] = []
     while script_lines:
@@ -105,18 +99,18 @@ def expand_rom(script):
             if not script["ops"]:
                 end_ptr = script["header_size"] + script["new_size"]
             else:
-                end_ptr = bstr_to_long(hex_to_bstr(script["ops"][0][1])) + \
+                end_ptr = eval("0x" + script["ops"][0][1]) + \
                           script["header_size"]
 
             if cmd == "COPY":
-                copy(bstr_to_long(hex_to_bstr(op[1])), 
-                     bstr_to_long(hex_to_bstr(op[0])))
+                copy(eval("0x" + op[1]), eval("0x" + op[0]))
            
             elif cmd == "FILL":
-                fill(bstr_to_long(hex_to_bstr(op[0])),
+                fill(eval("0x" + op[0]),
                      hex_to_bstr(op[1]))
 
             elif cmd == "REPLACE": pass
 
 script = load_script()
+print script
 expand_rom(script)
