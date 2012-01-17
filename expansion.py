@@ -6,7 +6,7 @@ import md5
 __author__ = "Devon Meunier"
 __email__ = "devon.meunier@utoronto.ca"
 __license__ = "MIT"
-__version__ = "0.1"
+__version__ = "0.2"
 
 def get_md5(source):
     """Return the MD5 hash of the file `source`."""
@@ -69,17 +69,20 @@ def load_script():
     return script
 
 def expand_rom(script):
-    with open(script["source"], "rb") as s, open(script["target"], "wb") as t:
+    script["patches"] = []
+    for op in script["ops"]:
+        if op[0] == "REPLACE":
+            op.pop(0)
+            script["patches"].append(op)
 
+    with open(script["source"], "rb") as s, open(script["target"], "wb") as t:
+        
         def copy(a, b):
             source_ptr = script["header_size"] + a
             write_ptr = script["header_size"] + b
             s.seek(source_ptr)
             t.seek(write_ptr)
             t.write(s.read(end_ptr - write_ptr))
-
-        def replace(a, b):
-            pass # maybe do this in a second pass
 
         def fill(destination, value):
             write_ptr = script["header_size"] + destination
@@ -101,12 +104,23 @@ def expand_rom(script):
 
             if cmd == "COPY":
                 copy(eval("0x" + op[1]), eval("0x" + op[0]))
-           
+
             elif cmd == "FILL":
                 fill(eval("0x" + op[0]),
                      hex_to_bstr(op[1]))
+            else:
+                raise Exception
 
-            elif cmd == "REPLACE": pass
+    target = open(script["target"], "wb")
+    for patch in script["patches"]:
+        offset = eval("0x" + patch.pop(0))
+        data  = hex_to_bstr("".join(["0" * (2 - len(x)) + x for x in patch]))
+        target.seek(offset)
+        target.write(data)
+    target.close()
 
-script = load_script()
-expand_rom(script)
+def run():
+    script = load_script()
+    expand_rom(script)
+
+run()

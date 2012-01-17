@@ -3,7 +3,7 @@
 from os import path
 
 class UPS:
-    self.magic = "UPS1" #4-byte UPS 1.0 header
+    magic = "UPS1" #4-byte UPS 1.0 header
     
     def __init__(self, filea, patch, fileb = None):
         if fileb:
