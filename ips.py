@@ -1,21 +1,32 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import getopt
+"""Usage:
+    ips [options] PATCH TARGET
+
+Options:
+    -h --help         Display this message.
+    -v --verbose      View logging output
+    -b --backup       Create a backup of target named TARGET.bak
+    -f --fake-header  Fake a SNES header
+"""
+
+
 import sys
 import shutil
 import struct
 import logging
 import os
 
+from docopt import docopt
 
-### API Documentation
+
 def apply(patchname, filename, **kwargs):
-    if 'backup' in kwargs:
+    if kwargs["--backup"]:
         shutil.copyfile(filename, filename + ".bak")
 
-    if 'logging' in kwargs:
-        logging.basicConfig(filename=patchname[:-3] + 'log',
+    if kwargs["--verbose"]:
+        logging.basicConfig(filename=filename + '.log',
                             level=logging.INFO)
 
     logging.info('Applying to "%s"' % filename)
@@ -58,7 +69,10 @@ def apply(patchname, filename, **kwargs):
             data = patchfile.read(size)
 
         # Write to file
-        if 'fake' in kwargs and kwargs['fake']:
+        if kwargs['--fake-header']:
+            if offset - 512 < 0:
+                sys.stdout.write("Skipping record.\n")
+                continue
             infile.seek(offset - 512)
         else:
             infile.seek(offset)
@@ -77,28 +91,8 @@ def apply(patchname, filename, **kwargs):
 
 
 def main():
-    kwargs = {}
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "f:p:lb", ['fake-header'])
-    except getopt.GetoptError:
-        sys.stderr.write("usage")
-        sys.exit(2)
-    if len(opts) == 0:
-        sys.stderr.write("usage")
-        sys.exit(2)
-    for o, a in opts:
-        if o == "-f":
-            topatch = a
-        elif o == "-p":
-            ips = a
-        elif o == "-l":
-            kwargs['logging'] = True
-        elif o == "-b":
-            kwargs['backup'] = True
-        elif o == "--fake-header":
-            kwargs['fake'] = True
-
-    apply(ips, topatch, **kwargs)
+    kwargs = docopt(__doc__)
+    apply(kwargs['PATCH'], kwargs['TARGET'], **kwargs)
 
 if __name__ == "__main__":
     main()
