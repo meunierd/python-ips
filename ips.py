@@ -5,94 +5,69 @@
     ips [options] PATCH TARGET
 
 Options:
-    -h --help         Display this message.
-    -v --verbose      View logging output
-    -b --backup       Create a backup of target named TARGET.bak
-    -f --fake-header  Fake a SNES header
+    -h --help    Display this message.
+    -b --backup  Create a backup of target named TARGET.bak
 """
 
 
-import sys
 import shutil
 import struct
-import logging
-import os
 
+from os.path import getsize
 from docopt import docopt
 
 
-def apply(patchname, filename, **kwargs):
-    if kwargs["--backup"]:
-        shutil.copyfile(filename, filename + ".bak")
+def unpack_int(string):
+    """Read an n-byte big-endian integer from a byte string."""
+    (ret,) = struct.unpack_from('>I', b'\x00' * (4 - len(string)) + string)
+    return ret
 
-    if kwargs["--verbose"]:
-        logging.basicConfig(filename=filename + '.log',
-                            level=logging.INFO)
+def apply(patchpath, filepath):
+    patch_size = getsize(patchpath)
 
-    logging.info('Applying to "%s"' % filename)
-    logging.info("Record   | Size | Range Patched     | RLE")
-    logging.info("---------+------+-------------------+----")
 
-    patchfile = open(patchname, 'rb')
-    infile = open(filename, 'r+b')
+    patchfile = open(patchpath, 'rb')
+    target = open(filepath, 'r+b')
 
-    header = patchfile.read(5)
-    if header != b'PATCH':
-        sys.stderr.write("Error. No IPS header. READ: %s\n" % header)
-        sys.exit(2)
-    while True:
-        pt = patchfile.tell()
-        rle_size = None
+    if patchfile.read(5) != b'PATCH':
+        raise Exception
 
-        # Read Record
-        r = patchfile.read(3)
-
-        # Are we at the end?
-        if r == b'EOF' and os.path.getsize(patchname) == patchfile.tell():
-            sys.stdout.write('Patching "%s" successful.\n' % filename)
-            break
-
+    # Read First Record
+    r = patchfile.read(3)
+    while patchfile.tell() not in [patch_size, patch_size - 3]:
         # Unpack 3-byte pointers.
-        offset = struct.unpack_from('>I', b'\x00' + r)[0]
+        offset = unpack_int(r)
         # Read size of data chunk
         r = patchfile.read(2)
-        if len(r) == 0:
-            break
-        size = struct.unpack_from('>I', b'\x00\x00' + r)[0]
+        size = unpack_int(r)
 
         if size == 0:  # RLE Record
             r = patchfile.read(2)
-            rle_size = struct.unpack_from('>I', b'\x00\x00' + r)[0]
+            rle_size = unpack_int(r)
             data = patchfile.read(1) * rle_size
         else:
-            # Read Data
             data = patchfile.read(size)
 
         # Write to file
-        if kwargs['--fake-header']:
-            if offset - 512 < 0:
-                sys.stdout.write("Skipping record.\n")
-                continue
-            infile.seek(offset - 512)
-        else:
-            infile.seek(offset)
-        infile.write(data)
-        # Write to log
-        rle = "No"
-        if rle_size:
-            size = rle_size
-            rle = "Yes"
-        logging.info("%08X | %04X | %08X-%08X | %s"
-                     % (pt, size, offset, offset + size, rle))
+        target.seek(offset)
+        target.write(data)
+        # Read Next Record
+        r = patchfile.read(3)
+
+    if patch_size - 3 == patchfile.tell():
+        trim_size = unpack_int(patchfile.read(3))
+        target.truncate(trim_size)
 
     # Cleanup
-    infile.close()
+    target.close()
     patchfile.close()
 
 
 def main():
     kwargs = docopt(__doc__)
-    apply(kwargs['PATCH'], kwargs['TARGET'], **kwargs)
+    if kwargs['--backup']:
+        shutil.copyfile(kwargs['TARGET'], kwargs['TARGET'] + ".bak")
+    apply(kwargs['PATCH'], kwargs['TARGET'])
 
 if __name__ == "__main__":
     main()

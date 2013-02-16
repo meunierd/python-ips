@@ -1,7 +1,8 @@
 python-ips
 ----------
 
-An IPS patching application with api, cli, and WinForms interfaces.
+An IPS patching application with api, cli, and WinForms interfaces. Python 2/3
+compatibility is supported.
 
 Basic Usage
 -----------
@@ -27,16 +28,3 @@ Save a backup of the patched file.
 ::
 
     -b --backup
-
-Save a log.
-
-::
-
-    -v --verbose
-
-Spoof a header for SNES patches which require them.
-
-::
-
-    -f --fake-header
-
