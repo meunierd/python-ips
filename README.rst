@@ -28,7 +28,7 @@ Apply an IPS patch to a file.
 
 ::
 
-    python PATCH TARGET 
+    python-ips PATCH TARGET 
 
 Or on Windows, be sure to have python.exe on your path and run.
 

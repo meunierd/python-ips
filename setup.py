@@ -15,7 +15,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "ips = python-ips:main"
+            "python-ips = ips:main"
         ]
     },
 )

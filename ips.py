@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Usage:
-    ips [options] PATCH TARGET
+    python-ips [options] PATCH TARGET
 
 Options:
     -h --help    Display this message.
@@ -24,13 +24,11 @@ def unpack_int(string):
 
 def apply(patchpath, filepath):
     patch_size = getsize(patchpath)
-
-
     patchfile = open(patchpath, 'rb')
     target = open(filepath, 'r+b')
 
     if patchfile.read(5) != b'PATCH':
-        raise Exception
+        raise Exception('Invalid patch header.')
 
     # Read First Record
     r = patchfile.read(3)
