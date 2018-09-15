@@ -45,3 +45,9 @@ Save a backup of the patched file.
 ::
 
     -b --backup
+
+Fake a SNES header
+
+::
+
+    --fake-header

@@ -5,8 +5,9 @@
     python-ips [options] PATCH TARGET
 
 Options:
-    -h --help    Display this message.
-    -b --backup  Create a backup of target named TARGET.bak
+    --fake-header  Fake a SNES header.
+    -h --help      Display this message.
+    -b --backup    Create a backup of target named TARGET.bak
 """
 
 
@@ -22,7 +23,7 @@ def unpack_int(string):
     (ret,) = struct.unpack_from('>I', b'\x00' * (4 - len(string)) + string)
     return ret
 
-def apply(patchpath, filepath):
+def apply(patchpath, filepath, fake_header=False):
     patch_size = getsize(patchpath)
     patchfile = open(patchpath, 'rb')
     target = open(filepath, 'r+b')
@@ -35,6 +36,8 @@ def apply(patchpath, filepath):
     while patchfile.tell() not in [patch_size, patch_size - 3]:
         # Unpack 3-byte pointers.
         offset = unpack_int(r)
+        if fake_header:
+            offset -= 512
         # Read size of data chunk
         r = patchfile.read(2)
         size = unpack_int(r)
@@ -46,9 +49,10 @@ def apply(patchpath, filepath):
         else:
             data = patchfile.read(size)
 
-        # Write to file
-        target.seek(offset)
-        target.write(data)
+        if offset >= 0:
+            # Write to file
+            target.seek(offset)
+            target.write(data)
         # Read Next Record
         r = patchfile.read(3)
 
@@ -65,7 +69,7 @@ def main():
     kwargs = docopt(__doc__)
     if kwargs['--backup']:
         shutil.copyfile(kwargs['TARGET'], kwargs['TARGET'] + ".bak")
-    apply(kwargs['PATCH'], kwargs['TARGET'])
+    apply(kwargs['PATCH'], kwargs['TARGET'], kwargs['--fake-header'])
 
 if __name__ == "__main__":
     main()

@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name="python-ips",
-    version='2.0',
+    version='2.1',
     description="Python IPS patcher.",
     author="Devon Meunier",
     license="MIT License",
